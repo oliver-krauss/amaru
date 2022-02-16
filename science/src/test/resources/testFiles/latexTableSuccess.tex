@@ -1,0 +1,35 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{TableTest}
+\author{Oliver Krauss}
+\date{October 2019}
+
+\begin{document}
+
+    \maketitle
+
+\begin{table}[]
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+          & \textbf{A} & \textbf{B} & \textbf{C}  \\ \hline
+  rankSum & 9242.5     & 25050.0    & 10857.5      \\ \hline
+    count & 100        & 100        & 100          \\ \hline
+\end{tabular}
+
+\begin{tabular}{|l|l|}
+\hline
+  areDifferentDistributions & true \\ \hline
+                      count & 300 \\ \hline
+                          H & 201.0685880398671 \\ \hline
+           degreesOfFreedom & 2 \\ \hline
+                     pValue & 1.0808837047626696E-8 \\ \hline
+                 pThreshold & 0.05 \\ \hline
+\end{tabular}
+\caption{FreemarkerTestReport}
+\label{tab:testTable}
+\end{center}
+\end{table}
+
+\end{document}

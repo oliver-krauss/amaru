@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright (c) 2022 the original author or authors.
+  ~ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <import resource="classpath*:repositoryConfig.xml"/>
+
+    <bean id="logger" class="at.fh.hagenberg.aist.seshat.Logger" factory-method="getInstance">
+        <constructor-arg value="at.fh.hagenberg.aist.hlc.worker.Worker" />
+        <property name="logLevel" value="ERROR" />
+    </bean>
+
+    <bean id="messageCollectionWorker" class="at.fh.hagenberg.aist.gce.optimization.external.MessageCollectingWorker" />
+    <bean id="messageCollectionManager" class="at.fh.hagenberg.aist.gce.optimization.external.GceExternalConfigurationManager" />
+
+    <bean id="collectionWorker" class="at.fh.hagenberg.aist.hlc.worker.Worker">
+        <property name="worker" ref="messageCollectionWorker" />
+        <property name="configWorker" ref="messageCollectionManager" />
+        <property name="logger" ref="logger" />
+        <!-- msecs -->
+        <property name="heartbeatInterval" value="1000" />
+        <!-- initial reconnect -->
+        <property name="intervalInit" value="1000" />
+        <!-- IDs of the languages supported by the worker -->
+        <property name="supportedLanguages">
+            <util:list value-type="java.lang.Long">
+                <value>0</value> <!-- MiniC -->
+            </util:list>
+        </property>
+        <!-- endpoint that worker connects to (broker backend) -->
+        <property name="brokerBackend" value="tcp://127.0.0.1:5556" />
+        <!-- 3-5 is reasonable -->
+        <property name="heartbeatLiveness" value="3" />
+        <!-- after exponential backoff -->
+        <property name="intervalMax" value="32000" />
+    </bean>
+</beans>

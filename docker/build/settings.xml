@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2022 the original author or authors.
+  ~ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  -->
+
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+ <servers>
+   <server>
+      <id>nexus</id>
+      <username>o.krauss</username>
+      <password>SCIENCE890n1</password>
+   </server>
+   <server>
+      <id>maven-releases</id>
+      <username>o.krauss</username>
+      <password>SCIENCE890n1</password>
+   </server>
+   <server>
+      <id>maven-snapshots</id>
+      <username>o.krauss</username>
+      <password>SCIENCE890n1</password>
+   </server>
+   <server>
+      <id>javadoc</id>
+      <username>o.krauss</username>
+      <password>SCIENCE890n1</password>
+   </server>
+
+ </servers>
+ <mirrors>
+   <mirror>
+     <id>nexus</id>
+     <name>Aist Nexus</name>
+     <url>https://aist.fh-hagenberg.at/nexus/repository/maven-public/</url>
+     <mirrorOf>central</mirrorOf>
+   </mirror>
+ </mirrors>
+ 
+ <profiles>
+   <profile>
+     <id>sonar-coverage</id>
+	<properties>
+	  <sonar.login>db21b7bc5fdc2522d053842eb5dc33975c74981c</sonar.login>
+	  <sonar.password />
+	  <sonar.host.url>https://localhost:9002/sonar</sonar.host.url>
+	</properties>
+   </profile>
+   <profile>
+     <id>nexus</id>
+     <activation>
+       <activeByDefault>true</activeByDefault>
+     </activation>
+     <repositories>
+       <repository>
+         <id>maven-releases</id>
+         <url>https://aist.fh-hagenberg.at/nexus/repository/maven-releases/</url>
+         <layout>default</layout>
+         <releases>
+           <enabled>true</enabled>
+         </releases>
+         <snapshots>
+           <enabled>false</enabled>
+         </snapshots>
+       </repository>
+       <repository>
+         <id>maven-snapshots</id>
+         <url>https://aist.fh-hagenberg.at/nexus/repository/maven-snapshots/</url>
+         <layout>default</layout>
+         <releases>
+           <enabled>false</enabled>
+         </releases>
+         <snapshots>
+           <enabled>true</enabled>
+         </snapshots>
+       </repository>  
+       <repository>
+         <id>javadoc</id>
+         <url>https://aist.fh-hagenberg.at/nexus/repository/javadoc/</url>
+         <layout>default</layout>
+         <releases>
+           <enabled>false</enabled>
+         </releases>
+         <snapshots>
+           <enabled>false</enabled>
+         </snapshots>
+       </repository>   
+     </repositories>
+     <pluginRepositories>
+        <pluginRepository>
+          <id>maven-public</id>
+          <url>https://aist.fh-hagenberg.at/nexus/repository/maven-public/</url>
+          <layout>default</layout>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+          <id>maven-releases</id>
+          <url>https://aist.fh-hagenberg.at/nexus/repository/maven-releases/</url>
+          <layout>default</layout>
+          <releases>
+            <enabled>true</enabled>
+          </releases>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+        <pluginRepository>
+          <id>maven-snapshots</id>
+          <url>https://aist.fh-hagenberg.at/nexus/repository/maven-snapshots/</url>
+          <layout>default</layout>
+          <releases>
+              <enabled>false</enabled>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+   </profile>
+ </profiles>
+</settings>
+

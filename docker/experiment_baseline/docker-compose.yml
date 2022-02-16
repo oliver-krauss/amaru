@@ -1,0 +1,28 @@
+version: '3.7'
+
+services:
+  neo4j:
+    image: neo4j-apoc
+    restart: unless-stopped
+    volumes:
+      - experiment-baseline-data:/var/lib/neo4j/data
+      - experiment-baseline-config:/var/lib/neo4j/conf
+    build:
+      context: .
+      dockerfile: DockerfileNeo4J
+    networks:
+    - internal
+    ports:
+    - "7687:7687"
+    - "7474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/spring
+
+volumes:
+  experiment-baseline-data:
+  experiment-baseline-config:
+
+networks:
+  internal:
+    driver: bridge
+

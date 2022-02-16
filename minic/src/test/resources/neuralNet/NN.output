@@ -1,0 +1,32 @@
+Input 
+0.0
+0.0
+Output 
+8.940698E-8
+Expected output 
+0.0
+
+Input 
+1.0
+0.0
+Output 
+1.0
+Expected output 
+1.0
+
+Input 
+0.0
+1.0
+Output 
+1.0
+Expected output 
+1.0
+
+Input 
+1.0
+1.0
+Output 
+-4.4703484E-8
+Expected output 
+0.0
+

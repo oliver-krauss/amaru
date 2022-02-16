@@ -1,0 +1,40 @@
+// test simple struct creation
+struct point {
+   int xAxis;
+   int yAxis;
+};
+
+// test create struct with struct referenced
+struct line {
+    struct point from;
+    struct point to;
+};
+
+// test create empty struct
+struct {};
+
+int main() {
+    // test local struct creation
+    struct point x, y;
+
+    // test struct write
+    x.xAxis = 5;
+    y.xAxis = 3;
+
+    // test struct read
+    print(x.xAxis);
+    print(y.xAxis);
+
+    // test struct w.ref read
+    struct line lineRider;
+    lineRider.from.xAxis = 2;
+    lineRider.to.yAxis = 3;
+
+    // test assignment of struct value to variable
+    int test;
+    test = x.xAxis;
+    test = lineRider.from.xAxis;
+    print(test);
+
+    return 0;
+}

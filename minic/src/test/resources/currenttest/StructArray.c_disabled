@@ -1,0 +1,73 @@
+struct structception {
+    struct layer2 {
+        struct layer3 {
+            int layer4Var;
+        };
+    };
+    struct layer2b {
+        struct {
+            int layer3Var;
+        };
+    };
+} xzibit;
+
+struct point {
+   int xAxis;
+   int yAxis;
+};
+
+struct line {
+    struct point from;
+    struct point to;
+    struct line next; // TODO this should be impossible (endless recursion)
+};
+
+struct point3d {
+   int xAxis;
+   int yAxis;
+   int zAxis;
+} a, b, c[10];
+
+struct arrayCollection {
+   int array1[10];
+   int array2[20];
+   int array3[30];
+};
+
+struct arrayCollection2 {
+   int array1[10];
+   int array2[20];
+   int array3[30];
+} collection;
+
+struct {
+   int silentstruct;
+   int unnamed;
+   int butvalid;
+} silent;
+
+struct {};
+
+int main() {
+    struct point x, y, z[10];
+    silent.unnamed = 7;
+    x.xAxis = 5;
+    z[3].xAxis = 3;
+    collection.array1[3] = 25;
+    print(x.xAxis);
+    print(z[3].xAxis);
+
+    struct line lineRider;
+    lineRider.from.xAxis = 2;
+    lineRider.to.yAxis = 3;
+
+    int test;
+    test = x.xAxis;
+    test = lineRider.from.xAxis;
+    test = collection.array1[3];
+    test = silent.unnamed;
+    test = c[5].xAxis;
+    print(test);
+
+    return 0;
+}

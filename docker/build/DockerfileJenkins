@@ -1,0 +1,47 @@
+# to update jenkins simply change the version below
+FROM jenkins/jenkins:2.249.2-lts-jdk11
+# install docker
+# root is necessary
+USER root 
+RUN apt-get update 
+RUN apt-get install -y \
+    wget
+# set up docker repository
+RUN apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common 
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - 
+RUN add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+# actual installation of docker
+RUN apt-get update
+RUN apt-get install -y docker-ce
+# allow jenkins to use docker
+RUN usermod -aG docker jenkins
+# install gtk v2 for imaging. Remove following once this is not needed anymore
+RUN apt-get install -y gtk2.0
+#install git lfs
+RUN build_deps="curl" && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ${build_deps} ca-certificates && \
+    curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git-lfs && \
+    git lfs install && \
+    DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove ${build_deps} && \
+    rm -r /var/lib/apt/lists/*
+
+# Install maven 
+RUN wget http://mirror.klaus-uwe.me/apache/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz && \
+    tar xvzf apache-maven-3.6.3-bin.tar.gz -C /usr/share/ && \
+    mv /usr/share/apache-maven-3.6.3 /usr/share/maven
+ENV PATH="/usr/share/maven/bin:${PATH}"
+ENV M2_HOME=/usr/share/maven MAVEN_HOME=/usr/share/maven
+# COPY overrides the default config
+COPY settings.xml /usr/share/maven/conf/settings.xml 
+# ALso add it to a "default" location
+ADD settings.xml /etc/maven/settings.xml 
+

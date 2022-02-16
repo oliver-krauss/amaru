@@ -1,0 +1,5 @@
+FROM neo4j:4.0.6
+
+ADD apoc-4.0.0.12-all.jar /var/lib/neo4j/plugins/apoc-lib.jar
+ADD neo4j.conf /var/lib/neo4j/conf/neo4j.conf 
+ADD apoc.conf /var/lib/neo4j/conf/apoc.conf 

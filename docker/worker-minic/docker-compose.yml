@@ -1,0 +1,63 @@
+version: '3.7'
+
+services:
+  language-db:
+    image: neo4j-apoc
+    restart: unless-stopped
+    volumes:
+      - gce-languages:/var/lib/neo4j/data
+      - gce-languages-config:/var/lib/neo4j/conf
+    build:
+      context: .
+      dockerfile: DockerfileNeo4J
+    networks:
+    - internal
+    ports:
+    - "17687:7687"
+    - "17474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/spring
+
+  experiment-data:
+    image: neo4j-apoc
+    restart: unless-stopped
+    volumes:
+      - experiment-data:/var/lib/neo4j/data
+      - experiment-data-config:/var/lib/neo4j/conf
+    build:
+      context: .
+      dockerfile: DockerfileNeo4J
+    networks:
+    - internal
+    ports:
+    - "7687:7687"
+    - "7474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/spring
+
+  worker-minic:
+    image: worker-minic
+    restart: unless-stopped
+    depends_on:
+    - experiment-data
+    - language-db
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+    - internal
+    ports:
+    - "5570:5570"
+    environment:
+      at_fh_hagenberg_aist_gce_neo4j: neo4j
+
+volumes:
+  gce-languages:
+  gce-languages-config:
+  experiment-data:
+  experiment-data-config:
+
+networks:
+  internal:
+    driver: bridge
+

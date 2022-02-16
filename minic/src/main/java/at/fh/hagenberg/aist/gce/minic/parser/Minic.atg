@@ -1,0 +1,414 @@
+
+/*
+ * coco2 parser and scanner for MiniC to truffle
+ * Coco/R from http://ssw.jku.at/coco/
+ * execute in atg folder -> "java -jar ../../../../../../../../../../../lib/Coco.jar Minic.atg"
+ */
+
+COMPILER Minic
+
+CHARACTERS
+
+letter = 'A'..'Z' + 'a'..'z'.
+digit = "0123456789".
+cr = '\r'.
+lf = '\n'.
+tab = '\t'.
+whiteSpace = ' ' + tab + cr + lf.
+char = letter + digit + whiteSpace + "\'" + "\\".
+
+TOKENS
+
+ident = letter {letter | digit | '_'}.
+intCon = digit {digit}.
+floatCon = digit {digit} '.' {digit} ['E' ['+'|'-'] digit {digit}].
+charCon = "'" char "'".
+stringCon = '"' {char} '"'.
+Addop = '+' | '-'.
+Mulop = '*' | '/' | '%'.
+Relop = "==" | "!=" | ">" | ">=" | "<" | "<=".
+
+
+PRAGMAS
+
+COMMENTS FROM "/*" TO "*/"
+COMMENTS FROM "//" TO lf
+IGNORE cr + lf + tab
+
+PRODUCTIONS
+
+
+Minic
+=
+Program
+.
+
+Program
+=
+{
+(
+IF (la.kind == _ident && scanner.Peek().kind == _ident && !"(".equals(scanner.Peek().val)) (. scanner.ResetPeek(); .)
+ VarDecl<out MinicNode variable>
+| ProcDecl
+| ConstDecl<out MinicNode constant>
+| StructDecl<out MinicNode struct>
+)
+}.
+
+Type<out MinicBaseType type>
+=
+ident               (. Token typeToken = t; .)
+                    (. type = factory.selectType(typeToken); .)
+.
+
+ConstDecl<out MinicNode constant>
+=
+"const"           (. MinicExpressionNode value = null; .)
+Type<out MinicBaseType type>
+ident             (. Token identifierToken = t; .)
+"="
+(   intCon        (. value = factory.createIntLiteral(t); .)
+  | floatCon      (. value = factory.createFloatLiteral(t); .)
+  | charCon       (. value = factory.createCharLiteral(t); .)
+  | stringCon     (. value = factory.createStringLiteral(t); .)
+)
+";"               (. constant = factory.defineConstant(identifierToken, type, value); .)
+.
+
+
+StructDecl<out MinicNode struct>
+=
+"struct" (.
+Token structName = null;
+List<MinicNode> structFields = null;
+List<MinicNode> variables = new ArrayList<>();
+MinicNode variable;
+.)
+[ /* optional name */
+IF (true) /* enforce that if there is an identifier we will always use it here */
+ident (. structName = t; .)
+(. struct = factory.startStruct(structName); .)
+]
+["{" /* this block defines the struct */
+(. structFields = new ArrayList<>();
+   if (struct == null) struct = factory.startStruct(null); .)
+{
+StructDecl<out variable> (. if (variable != null) factory.addStructField(struct, variable); .)
+| VarDecl<out variable> (. if (variable != null) factory.addStructField(struct, variable); .)
+}
+"}"
+]
+(. // after declaration we end the scope
+   factory.finishStruct(); .)
+[ /* this block creates a struct variable */
+VarOrArrayDecl<out variable, struct>  (. if (variable != null) { variables.add(variable); } .)
+{','
+VarOrArrayDecl<out variable, struct>   (. if (variable != null) { variables.add(variable); } .)
+}
+]
+";"
+(.  /* C allows empty structs but not just "struct;" this enforces this */
+if (struct == null) SemErr("struct without content");
+.)
+ (.
+ if (variables.size() == 1) {
+          return variables.get(0);
+       } else if (variables.size() > 1) {
+          return new MinicBlockNode(variables.toArray(new MinicNode[variables.size()]));
+       }
+     .)
+.
+
+
+VarDecl<out MinicNode variable>
+=
+(. List<MinicNode> variables = new ArrayList<>(); .)
+Type<out MinicBaseType type>
+VarOrArrayDecl<out variable, type>  (. if (variable != null) { variables.add(variable); } .)
+{','
+VarOrArrayDecl<out variable, type>   (. if (variable != null) { variables.add(variable); } .)
+}
+';'
+ (. if (variables.size() == 1) {
+          return variables.get(0);
+       } else if (variables.size() > 1) {
+          return new MinicBlockNode(variables.toArray(new MinicNode[variables.size()]));
+       }
+     .)
+.
+
+
+VarOrArrayDecl<out MinicNode variable, Object type>
+=
+ident   (. Token identifierToken = t; List<MinicExpressionNode> arraySize = new ArrayList<>(); .)
+{
+'['
+Condition<out MinicExpressionNode size>     (. arraySize.add(size); .)
+']'
+}       (. variable = factory.defineVariable(identifierToken, type, arraySize); .)
+.
+
+
+ProcDecl
+=
+(. MinicBaseType type = null; .)
+(
+Type<out type>
+|
+"void"  (. type = MinicBaseType.VOID; .)
+)
+ident                                           (. Token identifierToken = t; .)
+                                                (. factory.startFunction(identifierToken, type); .)
+"("[FormPars]")"
+(
+BlockStatement<out MinicNode body, false>       (. factory.finishFunction(body, type); .)
+|
+';'                                             (. factory.finishFunctionDeclaration(type); .)
+)
+.
+
+FormPars
+=
+Type<out MinicBaseType type>
+    VarOrArrayDecl<out MinicNode variableCreation, type>      (. factory.addFormalParameter(t, type, variableCreation); .)
+{
+"," Type<out MinicBaseType nextType>
+    VarOrArrayDecl<out MinicNode variableCreation2, nextType>       (. factory.addFormalParameter(t, nextType, variableCreation2); .)
+}
+.
+
+Statement<out MinicNode result, boolean inLoop>
+=                                                  (. result = null; .)
+(
+    ConstDecl<out result>
+    | StructDecl<out result>
+    | ReturnStatement<out MinicNode returnSt>          (. result = returnSt; .)
+    | BlockStatement<out MinicNode body, inLoop>       (. result = body; .)
+    | IfStatement<out MinicNode ifNode, inLoop>        (. result = ifNode; .)
+    | WhileStatement<out MinicNode whileNode>          (. result = whileNode; .)
+    | ForStatement<out MinicNode forNode>              (. result = forNode; .)
+    | EmptyStatement
+    | (IF (isAssignmentOrMethodCall())
+        (. DesignatorHelper designatorHelper; .)
+       Designator<out designatorHelper>
+        (
+        "="
+        Condition<out MinicExpressionNode assignment>    (. if (designatorHelper.name == null) {
+                                                        SemErr("invalid assignment target");
+                                                    } else {
+                                                        if (designatorHelper.arrayPositions == null || designatorHelper.arrayPositions.size() == 0) {
+                                                            result = factory.createAssignment(designatorHelper.name, assignment);
+                                                        } else {
+                                                            result = factory.createArrayAssignment(designatorHelper.name, assignment, designatorHelper.arrayPositions);
+                                                        }
+                                                    }
+                                                    factory.leaveStruct();
+                                                    .)
+        |
+        ActPars<out result, null, t> /* function call */
+        )
+        ";")
+    | VarDecl<out result>
+)
+.
+
+WhileStatement<out MinicNode whileNode>
+=
+"while" "("
+Condition<out MinicExpressionNode conditionNode>
+")"
+Statement<out MinicNode bodyNode, true>             (. whileNode = factory.createWhileLoop(conditionNode, bodyNode); .)
+.
+
+ForStatement<out MinicNode forNode>
+=
+"for" "("
+Assignment<out MinicNode initNode> ";"
+Condition<out MinicExpressionNode conditionNode> ";"
+Assignment<out MinicNode stepNode>
+")"
+Statement<out MinicNode bodyNode, true>             (. forNode = factory.createForLoop(initNode, conditionNode, stepNode, bodyNode); .)
+.
+
+ReturnStatement<out MinicNode returnNode>
+=
+"return"
+Condition<out MinicExpressionNode returnStatement>  (. returnNode = factory.createReturn(returnStatement); .)
+";"
+.
+
+IfStatement<out MinicNode ifStatement, boolean inLoop>
+=
+"if" "("
+Condition<out MinicExpressionNode condition>
+")"
+Statement<out MinicNode thenStatement, inLoop>          (. MinicNode elseStatement = null; .)
+[
+"else"  // LL1 Warning concerning dangling else
+Statement<out elseStatement, inLoop>
+]
+                            (. ifStatement = factory.createIf(condition, thenStatement, elseStatement); .)
+.
+
+Condition<out MinicExpressionNode condition>
+=
+(. condition = null; .)
+(
+"!"                                     (. Token op = t; .)
+Condition<out condition>                (. condition = factory.createUnary(op, condition); .)
+|
+CondTerm<out condition>
+{
+"||"                                     (. Token op = t; .)
+CondTerm<out MinicExpressionNode right>  (. condition = factory.createBinary(op, condition, right); .)
+}
+)
+.
+
+CondTerm<out MinicExpressionNode condition>
+=
+CondFact<out condition>
+{
+"&&"                                        (. Token op = t; .)
+CondFact<out MinicExpressionNode right>     (. condition = factory.createBinary(op, condition, right); .)
+}
+.
+
+CondFact<out MinicExpressionNode condition>
+=
+Expr<out condition>
+[
+Relop                                   (. Token op = t; .)
+Expr<out MinicExpressionNode right>     (. condition = factory.createBinary(op, condition, right); .)
+]
+.
+
+Designator<out DesignatorHelper helper>
+=
+(. helper = new DesignatorHelper(); .)
+ident (. helper.name = t; .)
+{
+(
+"."
+ident (. factory.enterStruct(helper.name);
+         helper.name = t;
+         helper.arrayPositions = new ArrayList<>();
+      .)
+)
+|
+(
+"["
+Condition<out MinicExpressionNode result>   (. helper.arrayPositions.add(result); .)
+"]"
+)
+}
+.
+
+ActPars<out MinicExpressionNode result, MinicExpressionNode receiver, Token assignmentName>
+=
+"("                     (. List<MinicExpressionNode> parameters = new ArrayList<>();
+                           MinicExpressionNode parameter;
+                           if (receiver == null) {
+                               receiver = factory.findFunction(assignmentName);
+                           }
+                        .)
+[
+    Condition<out parameter> (. parameters.add(parameter); .)
+    {
+    ","
+    Condition<out parameter> (. parameters.add(parameter); .)
+    }
+]
+")"                     (. result = factory.createCall(receiver, parameters); .)
+.
+
+Expr<out MinicExpressionNode result>
+=
+Term<out result>
+{
+Addop                                   (. Token op = t; .)
+Term<out MinicExpressionNode right>     (. result = factory.createBinary(op, result, right); .)
+}
+.
+
+Term<out MinicExpressionNode result>
+=
+Factor<out result>
+{
+Mulop                                   (. Token op = t; .)
+Factor<out MinicExpressionNode right>   (. result = factory.createBinary(op, result, right); .)
+}
+.
+
+Factor<out MinicExpressionNode result>
+=
+(. result = null; DesignatorHelper designatorHelper; .)
+(
+    (. Token variableName = la; .)
+  Designator<out designatorHelper>
+  [
+  ActPars<out result, null, variableName>
+  ]             (. if (result == null) {
+                        if (designatorHelper.arrayPositions == null || designatorHelper.arrayPositions.size() == 0) {
+                            result = factory.createRead(designatorHelper.name);
+                        } else {
+                            result = factory.createArrayRead(designatorHelper.name, designatorHelper.arrayPositions);
+                        }
+                    }
+                    factory.leaveStruct();
+                    .)
+| intCon        (. result = factory.createIntLiteral(t); .)
+| floatCon      (. result = factory.createFloatLiteral(t); .)
+| charCon       (. result = factory.createCharLiteral(t); .)
+| stringCon     (. result = factory.createStringLiteral(t); .)
+| Addop                                        (. Token op = t; .)
+  Factor<out MinicExpressionNode inversion>    (. result = factory.createUnary(op, inversion); .)
+| "("
+  (
+     IF (isCast())
+     Type<out MinicBaseType type> ")"
+     Factor<out MinicExpressionNode value> (. result = factory.cast(value, type); .)
+     |
+        Condition<out result>
+        ")"
+  )
+)
+.
+
+EmptyStatement
+=
+";"
+.
+
+BlockStatement<out MinicNode result, boolean inLoop>
+=
+"{"                                      (. factory.startBlock();
+                                            List<MinicNode> body = new ArrayList<>(); .)
+{
+    Statement<out MinicNode s, inLoop>   (. if (s != null) { body.add(s); } .)
+}
+"}"                                      (. result = factory.finishBlock(body); .)
+.
+
+
+Assignment<out MinicNode assignmentNode>
+=
+(. DesignatorHelper designatorHelper;
+   assignmentNode = null; .)
+Designator<out designatorHelper>
+(
+"="
+Condition<out MinicExpressionNode assignment>    (. if (designatorHelper.name == null) {
+                                                SemErr("invalid assignment target");
+                                            } else {
+                                                if (designatorHelper.arrayPositions == null || designatorHelper.arrayPositions.size() == 0) {
+                                                    assignmentNode = factory.createAssignment(designatorHelper.name, assignment);
+                                                } else {
+                                                    assignmentNode = factory.createArrayAssignment(designatorHelper.name, assignment, designatorHelper.arrayPositions);
+                                                }
+                                            }
+                                            .)
+)
+.
+
+END Minic.

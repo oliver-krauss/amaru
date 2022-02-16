@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright (c) 2022 the original author or authors.
+  ~ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <import resource="languageRepositoryConfig.xml"/>
+
+    <bean id="authToken" class="org.neo4j.driver.AuthTokens" factory-method="basic">
+        <constructor-arg name="username" value="neo4j"/>
+        <constructor-arg name="password" value="spring"/>
+    </bean>
+
+    <bean id="driver" class="org.neo4j.driver.GraphDatabase" factory-method="driver" destroy-method="close">
+        <constructor-arg type="java.lang.String"
+                         value="bolt://#{systemEnvironment['at_fh_hagenberg_aist_gce_neo4j']}:7687"/>
+        <constructor-arg ref="authToken"/>
+    </bean>
+
+    <bean id="transactionManager" class="science.aist.neo4j.transaction.TransactionManagerImpl">
+        <property name="driver" ref="driver"/>
+    </bean>
+
+    <bean id="mapRelationshipTransactionManager"
+          class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetClass" value="science.aist.neo4j.reflective.MapRelationshipInformation"/>
+        <property name="targetMethod" value="addManager"/>
+        <property name="arguments" ref="transactionManager"/>
+    </bean>
+
+    <bean id="arrayRelationshipTransactionManager"
+          class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetClass" value="science.aist.neo4j.reflective.ArrayRelationshipInformation"/>
+        <property name="targetMethod" value="addManager"/>
+        <property name="arguments" ref="transactionManager"/>
+    </bean>
+
+    <bean id="problemRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.core.Problem"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.core.Problem"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+                <entry key="at.fh.hagenberg.machinelearning.core.ProblemGene" value-ref="problemGeneRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean id="solutionRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.core.Solution"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.core.Solution"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+                <entry key="at.fh.hagenberg.machinelearning.core.fitness.Cachet" value-ref="cachetRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.core.SolutionGene" value-ref="solutionGeneRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean id="cachetRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.core.fitness.Cachet"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.core.fitness.Cachet"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+    </bean>
+
+    <bean id="analyticsRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.analytics.graph.nodes.AnalyticsNode"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.analytics.graph.nodes.AnalyticsNode"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.StepNode" value-ref="stepRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.core.Problem" value-ref="problemRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.core.Solution" value-ref="solutionRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean id="stepRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.analytics.graph.nodes.StepNode"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.analytics.graph.nodes.StepNode"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.StepNode" value-ref="stepRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="nodeRepository" class="at.fh.hagenberg.machinelearning.analytics.graph.NodeRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.NodeWrapper"
+                       value-ref="nodeRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OrderedRelationship"
+                       value-ref="orderRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="orderRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JRelationshipRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OrderedRelationship"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OrderedRelationship"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="sourceRepository" ref="nodeRepository"/>
+        <property name="targetRepository" ref="nodeRepository"/>
+    </bean>
+
+    <bean name="patternSearchRepository"
+          class="at.fh.hagenberg.aist.gce.pattern.selection.PatternSearchSpaceRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.NodeWrapper"
+                       value-ref="nodeRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OrderedRelationship"
+                       value-ref="orderRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="runtimeProfileRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.runtime.RuntimeProfile"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.runtime.RuntimeProfile"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleTestValueRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.TruffleTestValueRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+    </bean>
+
+    <bean name="truffleTestCaseRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.TruffleTestCaseRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.TruffleTestValue"
+                       value-ref="truffleTestValueRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.OrderedTestInput"
+                       value-ref="truffleOrderedTestInputRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleOrderedTestInputRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JRelationshipRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.test.OrderedTestInput"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.test.OrderedTestInput"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="sourceRepository" ref="truffleTestCaseRepository"/>
+        <property name="targetRepository" ref="truffleTestValueRepository"/>
+    </bean>
+
+    <bean name="truffleOptimizationTestResultRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestResult"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestResult"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.runtime.RuntimeProfile"
+                       value-ref="runtimeProfileRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTest"
+                       value-ref="truffleTestCaseRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.TruffleTestValue"
+                       value-ref="truffleTestValueRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleOptimizationSolutionRepository"
+          class="at.fh.hagenberg.aist.gce.optimization.TruffleOptimizationSolutionRepository">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.TruffleOptimizationSolution"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.TruffleOptimizationSolution"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.NodeWrapper"
+                       value-ref="nodeRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestResult"
+                       value-ref="truffleOptimizationTestResultRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+
+    <bean id="problemGeneRepository" class="at.fh.hagenberg.machinelearning.analytics.graph.ProblemGeneRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JNodeRepositoyImpl">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.TruffleOptimizationProblem"
+                       value-ref="truffleOptimizationProblemRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean id="solutionGeneRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.core.SolutionGene"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.core.SolutionGene"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JNodeRepositoyImpl">
+                <entry key="at.fh.hagenberg.machinelearning.core.ProblemGene" value-ref="problemGeneRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.TruffleOptimizationSolution"
+                       value-ref="truffleOptimizationSolutionRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleSolutionRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.TruffleSolutionRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.core.fitness.Cachet" value-ref="cachetRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.core.SolutionGene" value-ref="solutionGeneRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleOptimizationTestComplexityRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JRelationshipRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestComplexity"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestComplexity"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="sourceRepository" ref="truffleOptimizationProblemRepository"/>
+        <property name="targetRepository" ref="truffleTestCaseRepository"/>
+    </bean>
+
+    <bean name="truffleOptimizationProblemRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.TruffleProblemGeneRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.NodeWrapper"
+                       value-ref="nodeRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.test.TruffleOptimizationTestComplexity"
+                       value-ref="truffleOptimizationTestComplexityRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.core.Solution" value-ref="solutionRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="populationRelationshipRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.PopulationRelationshipRepository">
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="sourceRepository" ref="stepRepository"/>
+        <property name="targetRepository" ref="solutionRepository"/>
+    </bean>
+
+    <bean name="operationRepository" class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OperationNode"/>
+        <constructor-arg value="at.fh.hagenberg.machinelearning.analytics.graph.nodes.OperationNode"/>
+        <constructor-arg name="manager" ref="transactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.NodeWrapper"
+                       value-ref="nodeRepository"/>
+                <entry key="at.fh.hagenberg.machinelearning.analytics.graph.nodes.StepNode" value-ref="stepRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <!-- note: unlike in jpa repos, the property ref MUST be defined, even though the bean doesn't have to be -->
+    <bean id="truffleGraphAnalytics" class="at.fh.hagenberg.machinelearning.analytics.TruffleGraphAnalytics">
+        <property name="analyticsRepository" ref="analyticsRepository"/>
+        <property name="stepRepository" ref="stepRepository"/>
+        <property name="problemRepository" ref="problemRepository"/>
+        <property name="problemGeneRepository" ref="problemGeneRepository"/>
+        <property name="solutionRepository" ref="truffleSolutionRepository"/>
+        <property name="operationRepository" ref="operationRepository"/>
+        <property name="nodeRepository" ref="nodeRepository"/>
+        <property name="populationRelationshipRepository" ref="populationRelationshipRepository"/>
+        <property name="truffleTestCaseRepository" ref="truffleTestCaseRepository"/>
+        <property name="truffleTestValueRepository" ref="truffleTestValueRepository"/>
+        <property name="truffleOptimizationProblemRepository" ref="truffleOptimizationProblemRepository"/>
+    </bean>
+
+</beans>

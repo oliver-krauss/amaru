@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  ~ Copyright (c) 2022 the original author or authors.
+  ~ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  ~
+  ~ This Source Code Form is subject to the terms of the Mozilla Public
+  ~ License, v. 2.0. If a copy of the MPL was not distributed with this
+  ~ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+  ~
+  -->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+       http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="languageAuthToken" class="org.neo4j.driver.AuthTokens" factory-method="basic">
+        <constructor-arg name="username" value="neo4j"/>
+        <constructor-arg name="password" value="spring"/>
+    </bean>
+
+    <bean id="languageDriver" class="org.neo4j.driver.GraphDatabase" factory-method="driver" destroy-method="close">
+        <constructor-arg type="java.lang.String"
+                         value="bolt://#{systemEnvironment['at_fh_hagenberg_aist_gce_neo4j']}:17687"/>
+        <constructor-arg ref="languageAuthToken"/>
+    </bean>
+
+    <bean id="languageTransactionManager" class="science.aist.neo4j.transaction.TransactionManagerImpl">
+        <property name="driver" ref="languageDriver"/>
+    </bean>
+
+    <bean id="languageMapRelationshipTransactionManager"
+          class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetClass" value="science.aist.neo4j.reflective.MapRelationshipInformation"/>
+        <property name="targetMethod" value="addManager"/>
+        <property name="arguments" ref="languageTransactionManager"/>
+    </bean>
+
+    <bean id="languageArrayRelationshipTransactionManager"
+          class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetClass" value="science.aist.neo4j.reflective.ArrayRelationshipInformation"/>
+        <property name="targetMethod" value="addManager"/>
+        <property name="arguments" ref="languageTransactionManager"/>
+    </bean>
+
+    <bean name="truffleLanguageInformationRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.TruffleLanguageInformationRepository"
+          depends-on="truffleClassInformationRepository">
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="openCLInformationRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.runtime.OpenCLInformation"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.runtime.OpenCLInformation"/>
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="systemInformationRepository"
+          class="at.fh.hagenberg.machinelearning.analytics.graph.SystemInformationRepository">
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.runtime.OpenCLInformation"
+                       value-ref="openCLInformationRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleClassInformationRepository"
+          depends-on="systemInformationRepository;truffleInitializerInformationRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInformation"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInformation"/>
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInitializer"
+                       value-ref="truffleInitializerInformationRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.runtime.SystemInformation"
+                       value-ref="systemInformationRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleInitializerInformationRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl"
+          depends-on="truffleParameterInformationRepository">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInitializer"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInitializer"/>
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+                <entry key="at.fh.hagenberg.aist.gce.optimization.util.TruffleClassInformation"
+                       value-ref="truffleClassInformationRepository"/>
+                <entry key="at.fh.hagenberg.aist.gce.optimization.util.TruffleParameterInformation"
+                       value-ref="truffleParameterInformationRepository"/>
+            </util:map>
+        </property>
+    </bean>
+
+    <bean name="truffleParameterInformationRepository"
+          class="science.aist.neo4j.reflective.ReflectiveNeo4JNodeRepositoryImpl">
+        <qualifier type="at.fh.hagenberg.aist.gce.optimization.util.TruffleParameterInformation"/>
+        <constructor-arg value="at.fh.hagenberg.aist.gce.optimization.util.TruffleParameterInformation"/>
+        <constructor-arg name="manager" ref="languageTransactionManager"/>
+        <property name="repositories">
+            <util:map map-class="java.util.HashMap" key-type="java.lang.Class"
+                      value-type="science.aist.neo4j.repository.AbstractNeo4JRepository">
+            </util:map>
+        </property>
+    </bean>
+
+</beans>

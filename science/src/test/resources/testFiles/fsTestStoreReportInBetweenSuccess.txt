@@ -1,0 +1,21 @@
+A
+B
+C
+This text shall be before the Freemarker Report;
+-----------
+FreemarkerTestReport
+        A       B       C       
+rankSum 9242.5  25050.0 10857.5 
+  count 100     100     100     
+Results:
+areDifferentDistributions = true
+                    count = 300
+                        H = 201.0685880398671
+         degreesOfFreedom = 2
+                   pValue = 1.0808837047626696E-8
+               pThreshold = 0.05
+-----------
+This text shall be after the Freemarker Report;
+D
+E
+F

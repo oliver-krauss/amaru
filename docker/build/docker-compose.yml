@@ -1,0 +1,87 @@
+version: '3.7'
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: DockerfileJenkins
+    container_name: jenkins
+    ports:
+       - 50000:50000
+       - 9001:8080
+    environment:
+      JAVA_OPTS: '-Dmail.smtp.starttls.enable=true'
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - front
+    deploy:
+      resources: 
+        limits: 
+          memory: 16384m
+    restart: always
+
+  sonarqube:
+    build:
+      context: .
+      dockerfile: DockerfileSonar
+    container_name: sonarqube_sonar
+    depends_on:
+       - postgres
+    entrypoint:
+      - ./bin/run.sh
+      - -Dsonar.web.context=/sonar
+    ports:
+      - 9002:9000
+    environment:
+      - SONARQUBE_JDBC_USERNAME=sonar
+      - SONARQUBE_JDBC_PASSWORD=MC)XH!x7Al5g$LcU
+      - SONARQUBE_JDBC_URL=jdbc:postgresql://postgres:5432/sonar
+    volumes:
+      - sonar-conf:/opt/sonarqube/conf
+      - sonar-data:/opt/sonarqube/data
+      - sonar-ext:/opt/sonarqube/extensions
+      - sonar-plugin:/opt/sonarqube/lib/bundled-plugins
+    networks:
+      - front
+      - back
+    deploy:
+      resources: 
+        limits: 
+          memory: 16384m
+    restart: always
+
+  postgres:
+    image: postgres:13
+    container_name: sonarqube_postgres
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=MC)XH!x7Al5g$LcU
+    volumes:
+      - sonar-postgres:/var/lib/postgresql
+      # This needs explicit mapping due to https://github.com/docker-library/postgres/blob/4e48e3228a30763913ece952c611e5e9b95c8759/Dockerfile.template#L52
+      - sonar-postgres-data:/var/lib/postgresql/data
+    networks:
+      - back
+    deploy:
+      resources: 
+        limits: 
+          memory: 512m
+    restart: always
+
+volumes:
+  jenkins-data:
+  sonar-conf:
+  sonar-data:
+  sonar-ext:
+  sonar-plugin:
+  sonar-postgres:
+  sonar-postgres-data:    
+    
+networks:
+   front:
+     driver: bridge
+   back:
+     driver: bridge
+

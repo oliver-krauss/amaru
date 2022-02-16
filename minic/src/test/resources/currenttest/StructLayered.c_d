@@ -1,0 +1,34 @@
+// test create struct with struct inside
+struct structception {
+    struct layer2 {
+        struct layer3 {
+            int layer4Var;
+        } l3;
+    } l2;
+    struct layer2b {
+        struct {
+            int layer3Var;
+        } l3b;
+    } l2b;
+} xzibit; // also test global struct
+
+int main() {
+    // test local struct creation
+    struct structception x;
+
+    // test struct write
+    x.l2.l3.layer4Var = 4;
+    xzibit.l2.l3.layer4Var = 7;
+
+    // test struct read
+    print(x.l2.l3.layer4Var);
+    print(xzibit.l2.l3.layer4Var);
+
+
+    // test assignment of struct value to variable
+    int test;
+    test = xzibit.l2.l3.layer4Var;
+    print(test);
+
+    return 0;
+}

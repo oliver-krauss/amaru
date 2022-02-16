@@ -1,0 +1,28 @@
+version: '3.7'
+
+services:
+  neo4j:
+    image: neo4j-apoc
+    restart: always
+    volumes:
+      - gce-languages:/var/lib/neo4j/data
+      - gce-languages-config:/var/lib/neo4j/conf
+    build:
+      context: .
+      dockerfile: DockerfileNeo4J
+    networks:
+    - internal
+    ports:
+    - "17687:7687"
+    - "17474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/spring
+
+volumes:
+  gce-languages:
+  gce-languages-config:
+
+networks:
+  internal:
+    driver: bridge
+
