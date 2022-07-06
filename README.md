@@ -105,6 +105,6 @@ it.
 - [Mining Patterns form Genetic Improvement Experiments](https://ieeexplore.ieee.org/document/8823638)
 - [Dynamic Fitness FUnctions for Genetic Improvement in Compilers and Interpeters](https://dl.acm.org/doi/10.1145/3205651.3208308)
 - [Towards a Framework for Stochastic Performance Optimizations in Compilers and Interpreters - An Architecture Overview](https://dl.acm.org/doi/10.1145/3237009.3237024)
-- Upcoming: PhD Thesis - will be published here after the defense.
+- [Thesis: Pattern Mining and Genetic Improvement in Compilers and Interpreters](https://epub.jku.at/obvulihs/content/titleinfo/7728352)
 
 (Additional work on GI not directly involving Amaru: http://gpbib.cs.ucl.ac.uk/gp-html/OliverKrauss.html)
